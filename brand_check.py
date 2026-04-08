@@ -48,6 +48,9 @@ BRAND_DOMAINS = {
     # Indian Govt
     "uidai.gov.in", "irctc.co.in", "npci.org.in", "mygov.in",
     "incometax.gov.in", "india.gov.in",
+
+
+    "zoom.us"
 }
 
 COMMON_TLDS = [".com", ".in", ".net", ".org", ".co", ".io"]
