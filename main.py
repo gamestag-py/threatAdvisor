@@ -7,6 +7,7 @@ from urllib.parse import urlparse
 from ua_check import cloaking_feature
 from brand_check import is_famous_domain, BRAND_DOMAINS
 from typosquatting import is_typosquat , FAMOUS_NAMES
+from homoglyph import detect_homoglyphs
 
 # ─── Paths ───────────────────────────────────────────────────────────────
 MODEL_PATH    = "model.pkl"
@@ -65,6 +66,7 @@ def extract_features(url):
         0 if is_famous_domain(domain) else 1,             # 10: not famous domain
         is_typosquat(domain),                             # 11: typosquat check
         brand_in_non_root(domain),                        # 12: brand in non-root
+        1 if detect_homoglyphs(domain)['suspicious'] else 0
     ]
 
 # ─── Load or build features ──────────────────────────────────────────────
@@ -114,6 +116,7 @@ else:
 # ─── Predict ─────────────────────────────────────────────────────────────
 urls = [
     # ✅ Safe — Major platforms
+    "https://amazｏn.com",
     "https://claude.ai/",
     "https://facebook.com",
     "https://amazon.com",
