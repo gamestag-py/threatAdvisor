@@ -3,7 +3,7 @@ from brand_check import BRAND_DOMAINS
 
 FAMOUS_NAMES = [
     # Search / Portals
-    "google", "bing", "yahoo", "duckduckgo", "baidu", "yandex",
+    "google", "bing", "yahoo", "duckduckgo", "baidu", "yandex", "zoom",
 
     # Social / Communication
     "facebook", "instagram", "whatsapp", "twitter", "linkedin",
