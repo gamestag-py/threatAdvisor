@@ -5,28 +5,66 @@ import os
 import joblib
 from urllib.parse import urlparse
 from ua_check import cloaking_feature
-from brand_check import is_famous_domain
+from brand_check import is_famous_domain, BRAND_DOMAINS
+from typosquatting import is_typosquat , FAMOUS_NAMES
 
 # ─── Paths ───────────────────────────────────────────────────────────────
 MODEL_PATH    = "model.pkl"
 FEATURES_PATH = "features.npy"
 LABELS_PATH   = "labels.npy"
 
+SHORTENERS = {
+    "bit.do", "tinyurl.com", "t.co", "goo.gl", "bit.ly",
+    "ow.ly", "is.gd", "buff.ly", "rebrand.ly", "cutt.ly"
+}
+
+PHISH_WORDS = [
+    "login", "verify", "account", "bank", "secure",
+    "offer", "free", "win", "gift", "amazon", "flipkart"
+]
+
+def brand_in_non_root(domain: str, full_url: str = "") -> int:
+    parts = domain.lower().lstrip("www.").split(".")
+    registered = ".".join(parts[-2:])
+
+    for brand in FAMOUS_NAMES:
+        # Brand in domain but not the registered domain
+        if brand in domain and registered not in BRAND_DOMAINS:
+            return 1
+        if re.match(rf'^{brand}[.\-]', registered) and registered not in BRAND_DOMAINS:
+            return 1
+
+    # NEW: brand name appears in URL path or query string
+    if full_url:
+        parsed = urlparse(full_url)
+        path_and_query = (parsed.path + "?" + parsed.query).lower()
+        for brand in FAMOUS_NAMES:
+            if re.search(rf'\b{brand}\b', path_and_query):
+                if registered not in BRAND_DOMAINS:
+                    return 1
+
+    return 0
+
 # ─── Feature extractor ───────────────────────────────────────────────────
 def extract_features(url):
     parsed = urlparse(url)
-    domain = parsed.netloc.lower()
+    domain = parsed.netloc.lower().lstrip("www.")
     return [
-        1 if url.startswith("http://") else 0,
-        len(url),
-        url.count("."),
-        1 if "@" in url else 0,
-        1 if "-" in domain else 0,
-        len(domain),
-        1 if re.search(r'\d', url) else 0,
-        1 if domain.endswith((".xyz", ".top", ".shop", ".site", ".online", ".live")) else 0,
-        1 if domain.count(".") >= 2 else 0,
-        1 if is_famous_domain(domain) else 0,   # ← bug fix from earlier
+        1 if url.startswith("http://") else 0,          # 0: insecure HTTP
+        len(url),                                         # 1: URL length
+        url.count("."),                                   # 2: dot count
+        1 if "@" in url else 0,                           # 3: has @
+        1 if "-" in domain else 0,                        # 4: has hyphen
+        len(domain),                                      # 5: domain length
+        1 if re.search(r'\d', url) else 0,                # 6: has digit
+        1 if any(re.search(rf'\b{w}\b', url.lower())
+                 for w in PHISH_WORDS) else 0,            # 7: phish keyword
+        1 if domain.endswith((".xyz", ".top", ".shop",
+                ".site", ".online", ".live")) else 0,     # 8: bad TLD
+        1 if domain.count(".") >= 2 else 0,               # 9: subdomain depth
+        0 if is_famous_domain(domain) else 1,             # 10: not famous domain
+        is_typosquat(domain),                             # 11: typosquat check
+        brand_in_non_root(domain),                        # 12: brand in non-root
     ]
 
 # ─── Load or build features ──────────────────────────────────────────────
@@ -71,6 +109,7 @@ else:
     y_pred = model.predict(X_test)
     print("Accuracy:", accuracy_score(y_test, y_pred))
     print(classification_report(y_test, y_pred))
+
 
 # ─── Predict ─────────────────────────────────────────────────────────────
 urls = [
@@ -180,18 +219,44 @@ urls = [
     "https://totallylegit.com/wp-admin/includes/signin/?ref=amazon",
 ]
 
+# ─── Predict ─────────────────────────────────────────────────────────────
 for url in urls:
-    domain   = urlparse(url).netloc.lower()
-    features = extract_features(url)
-    prediction = model.predict([features])[0]
+    parsed   = urlparse(url)
+    domain   = parsed.netloc.lower().lstrip("www.")
 
-    if not is_famous_domain(domain):
+    # Handle URL shorteners before anything else
+    if domain in SHORTENERS:
+        print(f"{url}: ⚠️ Unverified (URL shortener — destination unknown)")
+        continue
+
+    features   = extract_features(url)
+    prediction = model.predict([features])[0]
+    typosquat  = is_typosquat(domain)
+    brand_abuse = brand_in_non_root(domain , url)
+
+    if is_famous_domain(domain):
+        print(f"{url}: ✅ Safe (known brand)")
+        continue
+
+    # Typosquat — flag immediately without cloaking check (no HTTP needed)
+    if typosquat:
+        print(f"{url}: ⚠️ Phishing (typosquat detected)")
+        continue
+
+    # Brand abuse in non-root domain
+    if brand_abuse:
         cloak = cloaking_feature(url)
         if cloak == 1:
-            print(f"{url}: 🚨 High Confidence Phishing (Cloaking detected)")
-        elif prediction == 1:
-            print(f"{url}: ⚠️ Phishing (ML detected)")
+            print(f"{url}: 🚨 High Confidence Phishing (brand abuse + cloaking)")
         else:
-            print(f"{url}: ✅ Safe")
+            print(f"{url}: ⚠️ Phishing (brand abuse detected)")
+        continue
+
+    # Unknown domain — run cloaking check + ML
+    cloak = cloaking_feature(url)
+    if cloak == 1:
+        print(f"{url}: 🚨 High Confidence Phishing (Cloaking detected)")
+    elif prediction == 1:
+        print(f"{url}: ⚠️ Phishing (ML detected)")
     else:
-        print(f"{url}: ✅ Safe (known brand)")
+        print(f"{url}: ✅ Safe")
