@@ -1,4 +1,5 @@
 from difflib import get_close_matches
+from brand_check import BRAND_DOMAINS
 
 FAMOUS_NAMES = [
     # Search / Portals
@@ -69,17 +70,17 @@ def levenshtein(a: str, b: str) -> int:
     return dp[-1]
 
 def is_typosquat(domain: str) -> int:
-    # Strip TLD — only check the name part
     name = domain.split(".")[0].lower()
-    # Normalize digit substitutions: 0→o, 1→l, 3→e, 4→a, 5→s
     normalized = name.translate(str.maketrans("013345", "oleeAs"))
 
     for brand in FAMOUS_NAMES:
         # Exact match after normalization (catches faceb00k, paypa1)
         if normalized == brand:
+            # BUT: don't flag if the full domain is a legitimate known domain
+            if domain in BRAND_DOMAINS:
+                return 0
             return 1
-        # Levenshtein distance ≤ 2 (catches micosoft, youtobe, arnazon, instagrem)
-        if abs(len(name) - len(brand)) <= 3:  # skip obviously different lengths
+        if abs(len(name) - len(brand)) <= 3:  
             if levenshtein(normalized, brand) <= 2:
                 return 1
 
