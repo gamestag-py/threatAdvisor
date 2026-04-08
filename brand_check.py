@@ -71,7 +71,9 @@ BRAND_DOMAINS_SET = set(ALL_DOMAINS)  # O(1) lookups
 
 # Also auto-whitelist any *.gov.in / *.gov.* domain
 def is_famous_domain(domain: str) -> bool:
-    domain = domain.lower().lstrip("www.")
+    domain = domain.lower()
+    if domain.startswith("www."):
+        domain = domain[4:]
     if domain in BRAND_DOMAINS:
         return True
     # Auto-trust all government domains
