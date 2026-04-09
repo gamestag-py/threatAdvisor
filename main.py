@@ -13,10 +13,6 @@ from safe_browsing import parse_gsb_result , check_google_safe_browsing
 # ─── Paths ───────────────────────────────────────────────────────────────
 MODAL_FOLDER = "modal"
 
-# Old paths (kept for reference, now loading from modal folder)
-# MODEL_PATH    = "model.pkl"
-# FEATURES_PATH = "features.npy"
-# LABELS_PATH   = "labels.npy"
 
 AVAILABLE_MODELS = {
     "1": {
