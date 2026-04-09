@@ -68,6 +68,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     scanBtn.addEventListener('click', () => scanUrl(false));
     dismissErrorBtn.addEventListener('click', dismissError);
 
+    
     await new Promise(resolve => setTimeout(resolve, 300));
     // ❌ Remove: document.getElementById('emailResult').style.display = 'none';
     if (currentUrl && !currentUrl.startsWith('chrome://')) {
