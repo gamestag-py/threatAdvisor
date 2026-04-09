@@ -20,7 +20,7 @@ def normalize_domain(url: str) -> str:
     return domain
 
 def check_google_safe_browsing(url: str, timeout: int = 6):
-    api_key = "AIzaSyCUtawI7Aq0QqVZsUTpQ8eqtQTPAkunKkc"
+    api_key = "API KEY"
     if not api_key:
         return {"error": "API key missing"}
 
