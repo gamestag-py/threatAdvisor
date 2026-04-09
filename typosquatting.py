@@ -69,19 +69,65 @@ def levenshtein(a: str, b: str) -> int:
         dp = dp2
     return dp[-1]
 
-def is_typosquat(domain: str) -> int:
-    name = domain.split(".")[0].lower()
+
+
+
+
+
+
+from urllib.parse import urlparse
+
+def extract_domain(url: str) -> str:
+    # remove scheme
+    if "://" not in url:
+        url = "http://" + url
+    
+    netloc = urlparse(url).netloc.lower()
+    return netloc
+
+
+def get_root_domain(domain: str) -> str:
+    parts = domain.split(".")
+    
+    # handle domains like ac.in, co.in
+    if len(parts) >= 3 and parts[-2] in ["ac", "co", "gov", "org"]:
+        return ".".join(parts[-3:])
+    
+    return ".".join(parts[-2:])
+
+def is_typosquat(url: str) -> int:
+    domain = extract_domain(url)
+    root_domain = get_root_domain(domain)
+
+    # ✅ Allow known legit domains + subdomains
+    if root_domain in BRAND_DOMAINS:
+        return 0
+
+    name = root_domain.split(".")[0].lower()
+
+    # 🚫 Skip short domains (MAIN FIX)
+    if len(name) <= 4:
+        return 0
+
     normalized = name.translate(str.maketrans("013345", "oleeAs"))
 
     for brand in FAMOUS_NAMES:
-        # Exact match after normalization (catches faceb00k, paypa1)
+
+        # Skip comparison with very small brands too
+        if len(brand) <= 4:
+            continue
+
+        # ✅ Exact normalized match
         if normalized == brand:
-            # BUT: don't flag if the full domain is a legitimate known domain
-            if domain in BRAND_DOMAINS:
-                return 0
             return 1
-        if abs(len(name) - len(brand)) <= 3:  
-            if levenshtein(normalized, brand) <= 2:
-                return 1
+
+        # ✅ Strong similarity only (stricter)
+        dist = levenshtein(normalized, brand)
+
+        if len(name) >= 6 and dist == 1:
+            return 1
+
+        if len(name) >= 8 and dist <= 2:
+            return 1
 
     return 0

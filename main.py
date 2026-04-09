@@ -28,6 +28,13 @@ AVAILABLE_MODELS = {
         "features": os.path.join(MODAL_FOLDER, "features_phiusiil.npy"),
         "labels": os.path.join(MODAL_FOLDER, "labels_phiusiil.npy"),
         "dataset": "PhiUSIIL_Phishing_URL_Dataset.csv"
+    },
+    "3": {
+        "name": "3rd Dataset Model",
+        "model": os.path.join(MODAL_FOLDER, "model_3.pkl"),
+        "features": os.path.join(MODAL_FOLDER, "features_3.npy"),
+        "labels": os.path.join(MODAL_FOLDER, "labels_3.npy"),
+        "dataset": "phishing_site_urls.csv"
     }
 }
 
@@ -90,8 +97,6 @@ def extract_features(url):
         domain = domain[4:]
     return [
         1 if url.startswith("http://") else 0,          # 0: insecure HTTP
-        len(url),                                         # 1: URL length
-        url.count("."),                                   # 2: dot count
         1 if "@" in url else 0,                           # 3: has @
         1 if "-" in domain else 0,                        # 4: has hyphen
         len(domain),                                      # 5: domain length
@@ -129,6 +134,12 @@ else:
         df = df.dropna(subset=['URL', 'label']).reset_index(drop=True)
         url_column = 'URL'
         label_column = 'label'
+    elif "phishing_site_urls" in ACTIVE_DATASET_PATH:
+        # cleaned_dataset has 'url' column
+        df = df.dropna(subset=['URL', 'Label']).reset_index(drop=True)
+        url_column = 'URL'
+        label_column = 'Label'
+
     else:
         # cleaned_dataset has 'url' column
         df = df[df['url'] != 'URL'].reset_index(drop=True)
