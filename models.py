@@ -56,6 +56,15 @@ PHISH_WORDS = [
 
 
 
+def get_base_url(url: str) -> str:
+    """Extract only the scheme and domain, remove path and query parameters.
+    
+    Example: https://abc.domain.com/abubais?asasvquw → https://abc.domain.com
+    """
+    parsed = urlparse(url)
+    return f"{parsed.scheme}://{parsed.netloc}"
+
+
 def get_root_domain(domain: str) -> str:
     parts = domain.split(".")
     if len(parts) >= 3 and parts[-2] in ["ac", "co", "gov", "org"]:
@@ -211,13 +220,15 @@ def predict_url(url: str, model) -> dict:
         "emoji":      str,
     }
     """
-    parsed = urlparse(url)
+    # Remove path and query parameters, keep only scheme + domain
+    base_url = get_base_url(url)
+    parsed = urlparse(base_url)
     domain = parsed.netloc.lower().removeprefix("www.")
 
     # 1. URL shortener — destination unknown
     if domain in SHORTENERS:
         return {
-            "url": url, "label": "unverified",
+            "url": base_url, "label": "unverified",
             "confidence": "low",
             "reason": "URL shortener — destination unknown",
             "emoji": "⚠️",
@@ -226,7 +237,7 @@ def predict_url(url: str, model) -> dict:
     # 2. Known/famous domain — immediate safe exit
     if is_famous_domain(domain):
         return {
-            "url": url, "label": "safe",
+            "url": base_url, "label": "safe",
             "confidence": "high",
             "reason": "Known brand domain",
             "emoji": "✅",
@@ -235,63 +246,63 @@ def predict_url(url: str, model) -> dict:
     # 3. Typosquat check
     if is_typosquat(domain):
         return {
-            "url": url, "label": "phishing",
+            "url": base_url, "label": "phishing",
             "confidence": "high",
             "reason": "Typosquat detected",
             "emoji": "⚠️",
         }
 
     # 4. Brand abuse (+ optional cloaking escalation)
-    if brand_in_non_root(domain, url):
-        cloak = cloaking_feature(url)
+    if brand_in_non_root(domain, base_url):
+        cloak = cloaking_feature(base_url)
         if cloak == 1:
             return {
-                "url": url, "label": "phishing",
+                "url": base_url, "label": "phishing",
                 "confidence": "high",
                 "reason": "Brand abuse + cloaking detected",
                 "emoji": "🚨",
             }
         return {
-            "url": url, "label": "phishing",
+            "url": base_url, "label": "phishing",
             "confidence": "medium",
             "reason": "Brand abuse detected",
             "emoji": "⚠️",
         }
 
     # 5. Google Safe Browsing
-    gsb = parse_gsb_result(check_google_safe_browsing(url))
+    gsb = parse_gsb_result(check_google_safe_browsing(base_url))
     if gsb["score"] > 0:
         return {
-            "url": url, "label": "phishing",
+            "url": base_url, "label": "phishing",
             "confidence": "high",
             "reason": f"Flagged by Google Safe Browsing: {gsb['threats']}",
             "emoji": "🚨",
         }
 
     # 6. Cloaking standalone
-    if cloaking_feature(url) == 1:
+    if cloaking_feature(base_url) == 1:
         return {
-            "url": url, "label": "phishing",
+            "url": base_url, "label": "phishing",
             "confidence": "medium",
             "reason": "Cloaking detected",
             "emoji": "🚨",
         }
 
     # 7. ML model fallback
-    features   = extract_features(url)
+    features   = extract_features(base_url)
     print(features)
     prediction = model.predict([features])[0]
     print(model.predict([features]))
     if prediction == 1:
         return {
-            "url": url, "label": "phishing",
+            "url": base_url, "label": "phishing",
             "confidence": "low",
             "reason": "ML model flagged as phishing",
             "emoji": "⚠️",
         }
 
     return {
-        "url": url, "label": "safe",
+        "url": base_url, "label": "safe",
         "confidence": "medium",
         "reason": "Passed all checks",
         "emoji": "✅",
