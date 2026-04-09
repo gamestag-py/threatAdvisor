@@ -68,12 +68,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     scanBtn.addEventListener('click', () => scanUrl(false));
     dismissErrorBtn.addEventListener('click', dismissError);
 
-    
     await new Promise(resolve => setTimeout(resolve, 300));
-    // ❌ Remove: document.getElementById('emailResult').style.display = 'none';
     if (currentUrl && !currentUrl.startsWith('chrome://')) {
         scanUrl(true);
-        check_email(); // this now handles show/hide itself
+        check_email();
     }
 });
 
@@ -102,7 +100,7 @@ async function check_email() {
         const emailText = results?.[0]?.result;
         if (!emailText) {
             console.warn('Email body not found in Gmail tab');
-            emailResultEl.style.display = 'none'; // hide if email body not found yet
+            emailResultEl.style.display = 'none';
             return;
         }
 
@@ -121,7 +119,7 @@ async function check_email() {
 
     } catch (err) {
         console.error('Email check error:', err);
-        emailResultEl.style.display = 'none'; // hide on error too
+        emailResultEl.style.display = 'none';
         showError(`Email scan failed: ${err.message}`);
     }
 }
@@ -172,6 +170,7 @@ async function scanUrl(useCache = true) {
             hideResult();
             hideError();
             displayResult(cached, true); // true = show cached badge
+            await injectWarningIntoActiveTab(cached); // Inject warning if threat detected
             return;
         }
     }
@@ -195,6 +194,7 @@ async function scanUrl(useCache = true) {
         await setCached(currentUrl, data);
         hideLoading();
         displayResult(data, false);
+        await injectWarningIntoActiveTab(data); // Inject warning if threat detected
     } catch (err) {
         hideLoading();
         console.error('Scan error:', err);
@@ -269,6 +269,220 @@ function displayResult(data, fromCache = false) {
     resultContent.innerHTML = html;
     showResult();
 }
+
+// ========== THREAT WARNING INJECTION ==========
+
+// Main function that injects threat warning into the active tab
+async function injectWarningIntoActiveTab(data) {
+    const label = (data.label || data.threat_level || 'unknown').toLowerCase();
+    const isDanger = label === 'danger' || label === 'malicious';
+    const isWarning = label === 'warning' || label === 'phishing' || label === 'suspicious';
+
+    if (!isDanger && !isWarning) return; // Only show for threats
+
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab?.id) return;
+
+    try {
+        await chrome.scripting.executeScript({
+            target: { tabId: tab.id },
+            func: injectThreatWarning,
+            args: [{
+                isDanger,
+                isWarning,
+                url: data.url || tab.url || '',
+                reason: data.reason || data.message || '',
+                threats: data.threats || [],
+                label: label
+            }]
+        });
+    } catch (err) {
+        // Chrome's built-in warning page blocks content scripts
+        // This is expected behavior - the warning is already shown by Chrome
+        console.log('Warning: Could not inject custom warning (Chrome safety page may be blocking it)', err.message);
+    }
+}
+
+// This function runs INSIDE the webpage (injected via executeScript)
+function injectThreatWarning(threatData) {
+    const { isDanger, isWarning, url, reason, threats, label } = threatData;
+
+    // Create warning modal wrapper
+    const modal = document.createElement('div');
+    modal.id = 'threat-warning-modal';
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.7);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 999999;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    `;
+
+    // Create warning card
+    const card = document.createElement('div');
+    card.style.cssText = `
+        background: white;
+        border-radius: 12px;
+        padding: 32px;
+        max-width: 500px;
+        width: 90%;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        animation: slideIn 0.3s ease-out;
+    `;
+
+    // Add animation
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    `;
+    document.head.appendChild(style);
+
+    // Warning header
+    const header = document.createElement('div');
+    header.style.cssText = `
+        text-align: center;
+        margin-bottom: 20px;
+    `;
+
+    const emoji = isDanger ? '🚨' : '⚠️';
+    const statusColor = isDanger ? '#d32f2f' : '#f57c00';
+    const statusText = isDanger ? 'MALICIOUS SITE DETECTED' : 'WARNING: SUSPICIOUS SITE';
+
+    header.innerHTML = `
+        <div style="font-size: 48px; margin-bottom: 12px;">${emoji}</div>
+        <h1 style="margin: 0; color: ${statusColor}; font-size: 20px; font-weight: 600;">
+            ${statusText}
+        </h1>
+    `;
+    card.appendChild(header);
+
+    // Risk description
+    const description = document.createElement('p');
+    description.style.cssText = `
+        color: #333;
+        font-size: 14px;
+        line-height: 1.6;
+        margin: 16px 0;
+        text-align: center;
+    `;
+    description.textContent = reason || 'This website has been flagged as potentially harmful.';
+    card.appendChild(description);
+
+    // Threats list (if available)
+    if (threats && threats.length > 0) {
+        const threatsList = document.createElement('div');
+        threatsList.style.cssText = `
+            background: #f5f5f5;
+            border-left: 4px solid ${statusColor};
+            padding: 12px;
+            border-radius: 4px;
+            margin: 16px 0;
+            font-size: 13px;
+            color: #555;
+        `;
+        threatsList.innerHTML = `<strong>Detected Threats:</strong><ul style="margin: 8px 0 0 20px; padding: 0;">
+            ${threats.map(t => {
+                const threatName = typeof t === 'string' ? t : t.name || 'Unknown threat';
+                return `<li>${threatName}</li>`;
+            }).join('')}
+        </ul>`;
+        card.appendChild(threatsList);
+    }
+
+    // URL display
+    const urlDisplay = document.createElement('div');
+    urlDisplay.style.cssText = `
+        background: #f9f9f9;
+        padding: 10px;
+        border-radius: 4px;
+        margin: 16px 0;
+        font-size: 12px;
+        color: #666;
+        word-break: break-all;
+        border: 1px solid #ddd;
+    `;
+    urlDisplay.innerHTML = `<strong>URL:</strong> ${url}`;
+    card.appendChild(urlDisplay);
+
+    // Button container
+    const buttonContainer = document.createElement('div');
+    buttonContainer.style.cssText = `
+        display: flex;
+        gap: 12px;
+        margin-top: 24px;
+    `;
+
+    // Go back button
+    const goBackBtn = document.createElement('button');
+    goBackBtn.textContent = '← Go Back';
+    goBackBtn.style.cssText = `
+        flex: 1;
+        padding: 12px 16px;
+        border: 2px solid #ddd;
+        background: white;
+        color: #333;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+    `;
+    goBackBtn.onmouseover = () => {
+        goBackBtn.style.background = '#f5f5f5';
+        goBackBtn.style.borderColor = '#999';
+    };
+    goBackBtn.onmouseout = () => {
+        goBackBtn.style.background = 'white';
+        goBackBtn.style.borderColor = '#ddd';
+    };
+    goBackBtn.onclick = () => {
+        window.history.back();
+    };
+    buttonContainer.appendChild(goBackBtn);
+
+    // Continue button (with warning for malicious sites)
+    const continueBtn = document.createElement('button');
+    continueBtn.textContent = isDanger ? 'Continue Anyway' : 'Continue';
+    continueBtn.style.cssText = `
+        flex: 1;
+        padding: 12px 16px;
+        border: none;
+        background: ${statusColor};
+        color: white;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+    `;
+    continueBtn.onmouseover = () => {
+        continueBtn.style.opacity = '0.9';
+        continueBtn.style.transform = 'translateY(-1px)';
+    };
+    continueBtn.onmouseout = () => {
+        continueBtn.style.opacity = '1';
+        continueBtn.style.transform = 'translateY(0)';
+    };
+    continueBtn.onclick = () => {
+        modal.remove();
+    };
+    buttonContainer.appendChild(continueBtn);
+
+    card.appendChild(buttonContainer);
+    modal.appendChild(card);
+    document.body.insertBefore(modal, document.body.firstChild);
+}
+
+// ========== UTILITY FUNCTIONS ==========
 
 function getEmojiForLabel(label) {
     const emojiMap = { safe: '✅', warning: '⚠️', danger: '🚨', malicious: '🚨', suspicious: '⚠️' };
