@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Phishing Checker</title>
+
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background: #0f172a;
+    color: #fff;
+    display: flex;
+    justify-content: center;
+    padding: 40px;
+}
+
+.container {
+    width: 500px;
+    background: #1e293b;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.5);
+}
+
+h2 {
+    text-align: center;
+}
+
+input, select, button {
+    width: 100%;
+    padding: 10px;
+    margin-top: 10px;
+    border-radius: 8px;
+    border: none;
+}
+
+button {
+    background: #3b82f6;
+    color: white;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #2563eb;
+}
+
+.result {
+    margin-top: 20px;
+    padding: 15px;
+    background: #020617;
+    border-radius: 10px;
+}
+
+.safe { color: #22c55e; }
+.danger { color: #ef4444; }
+</style>
+</head>
+
+<body>
+
+<div class="container">
+    <h2>🔍 Phishing Checker</h2>
+
+    <!-- EMAIL CHECK -->
+    <h3>Email Check</h3>
+    <textarea type="text" id="emailInput" placeholder="Enter email text">
+
+    </textarea>
+    <button onclick="checkEmail()">Check Email</button>
+
+    <!-- URL CHECK -->
+    <h3 style="margin-top:20px;">URL Check</h3>
+    <input type="text" id="urlInput" placeholder="Enter URL">
+    
+    <select id="modelSelect">
+        <option value="1">Model 1</option>
+        <option value="2">Model 2</option>
+        <option value="3">Model 3</option>
+    </select>
+
+    <button onclick="checkURL()">Check URL</button>
+
+    <!-- RESULT -->
+    <div class="result" id="resultBox">
+        Result will appear here...
+    </div>
+</div>
+
+<script>
+
+// EMAIL CHECK
+async function checkEmail() {
+    const email = document.getElementById("emailInput").value;
+
+    const res = await fetch("http://127.0.0.1:8000/check/email", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ email })
+    });
+
+    const data = await res.json();
+    displayEmailResult(data);
+}
+
+
+// URL CHECK
+async function checkURL() {
+    const url = document.getElementById("urlInput").value;
+    const model = document.getElementById("modelSelect").value;
+
+    const res = await fetch("http://127.0.0.1:8000/check/url", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ url, model })
+    });
+
+    const data = await res.json();
+    displayURLResult(data);
+}
+
+
+// DISPLAY EMAIL RESULT
+function displayEmailResult(data) {
+    const box = document.getElementById("resultBox");
+
+    const colorClass = data.label.includes("Legitimate") ? "safe" : "danger";
+
+    box.innerHTML = `
+        <h3 class="${colorClass}">${data.label}</h3>
+        <p><b>Input:</b> ${data.input}</p>
+        <p><b>Confidence:</b> ${data.confidence}</p>
+        <p><b>Type:</b> ${data.type}</p>
+    `;
+}
+
+
+// DISPLAY URL RESULT
+function displayURLResult(data) {
+    const box = document.getElementById("resultBox");
+
+    const colorClass = data.label === "safe" ? "safe" : "danger";
+
+    box.innerHTML = `
+        <h3 class="${colorClass}">${data.emoji} ${data.label.toUpperCase()}</h3>
+        <p><b>URL:</b> ${data.url}</p>
+        <p><b>Confidence:</b> ${data.confidence}</p>
+        <p><b>Reason:</b> ${data.reason}</p>
+    `;
+}
+
+</script>
+
+</body>
+</html>

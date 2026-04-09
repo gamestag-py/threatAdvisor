@@ -61,8 +61,10 @@ def get_base_url(url: str) -> str:
     
     Example: https://abc.domain.com/abubais?asasvquw → https://abc.domain.com
     """
+    # parsed = urlparse(url)
+    # return f"{parsed.scheme}://{parsed.netloc}"
     parsed = urlparse(url)
-    return f"{parsed.scheme}://{parsed.netloc}"
+    return f"{parsed.scheme}://{parsed.netloc}{parsed.path}"
 
 
 def get_root_domain(domain: str) -> str:
@@ -120,7 +122,7 @@ def extract_features(url: str) -> list:
         # len(domain),
         # url.count("."),
         1 if "@" in url else 0,
-        1 if "-" in domain else 0,
+        # 1 if "-" in domain else 0,
         len(domain),
         1 if re.search(r"\d", url) else 0,
         1 if any(re.search(rf"\b{w}\b", url.lower()) for w in PHISH_WORDS) else 0,

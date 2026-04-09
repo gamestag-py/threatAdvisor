@@ -98,7 +98,7 @@ def extract_features(url):
     return [
         1 if url.startswith("http://") else 0,          # 0: insecure HTTP
         1 if "@" in url else 0,                           # 3: has @
-        1 if "-" in domain else 0,                        # 4: has hyphen
+        # 1 if "-" in domain else 0,                        # 4: has hyphen
         len(domain),                                      # 5: domain length
         1 if re.search(r'\d', url) else 0,                # 6: has digit
         1 if any(re.search(rf'\b{w}\b', url.lower())
