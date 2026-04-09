@@ -32,9 +32,38 @@
             <span class="btn-text">Re-scan URL</span>
         </button>
 
+                <!-- Email Analysis Result -->
+        <div id="emailResult" class="email-result-container hidden">
+            <div class="email-result-header">
+                <span class="email-icon">✉️</span>
+                <span class="email-result-title">Email Analysis</span>
+            </div>
+            <div class="email-result-body">
+                <div class="email-field">
+                    <span class="field-label">Subject</span>
+                    <span class="field-value" id="emailInput">—</span>
+                </div>
+                <div class="email-field">
+                    <span class="field-label">Status</span>
+                    <span class="field-value label-badge" id="emailLabel">—</span>
+                </div>
+                <div class="email-field">
+                    <span class="field-label">Verdict</span>
+                    <span class="field-value verdict-badge" id="emailPhishing">—</span>
+                </div>
+                <div class="email-field">
+                    <span class="field-label">Confidence</span>
+                    <span class="field-value confidence-value" id="emailConfidence">—</span>
+                </div>
+            </div>
+        </div>
+
+
         <div id="result" class="result-container hidden">
             <div class="result-content" id="resultContent"></div>
         </div>
+
+
 
         <div id="loading" class="loading hidden">
             <div class="spinner"></div>

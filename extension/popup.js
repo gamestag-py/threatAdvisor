@@ -65,14 +65,89 @@ async function setCached(url, data) {
 
 document.addEventListener('DOMContentLoaded', async () => {
     await getCurrentUrl();
-    scanBtn.addEventListener('click', () => scanUrl(false)); // manual = bypass cache
+    scanBtn.addEventListener('click', () => scanUrl(false));
     dismissErrorBtn.addEventListener('click', dismissError);
 
     await new Promise(resolve => setTimeout(resolve, 300));
+    // ❌ Remove: document.getElementById('emailResult').style.display = 'none';
     if (currentUrl && !currentUrl.startsWith('chrome://')) {
-        scanUrl(true); // auto-scan = use cache
+        scanUrl(true);
+        check_email(); // this now handles show/hide itself
     }
 });
+
+
+async function check_email() {
+    const emailResultEl = document.getElementById('emailResult');
+    const gmailMessagePattern = /https:\/\/mail\.google\.com\/mail\/u\/\d+\/#inbox\/[A-Za-z0-9]+/;
+
+    // Not a Gmail message page — hide the card and bail
+    if (!gmailMessagePattern.test(currentUrl)) {
+        emailResultEl.style.display = 'none';
+        return;
+    }
+
+    try {
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+
+        const results = await chrome.scripting.executeScript({
+            target: { tabId: tab.id },
+            func: () => {
+                const emailBody = document.querySelector('.ii.gt .a3s');
+                return emailBody ? emailBody.innerText : null;
+            }
+        });
+
+        const emailText = results?.[0]?.result;
+        if (!emailText) {
+            console.warn('Email body not found in Gmail tab');
+            emailResultEl.style.display = 'none'; // hide if email body not found yet
+            return;
+        }
+
+        const res = await fetch("http://127.0.0.1:8000/check/email", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: emailText })
+        });
+
+        if (!res.ok) throw new Error(`Server error: ${res.status}`);
+
+        const data = await res.json();
+        console.log(data);
+        showEmailResult(data);
+        return data;
+
+    } catch (err) {
+        console.error('Email check error:', err);
+        emailResultEl.style.display = 'none'; // hide on error too
+        showError(`Email scan failed: ${err.message}`);
+    }
+}
+
+function showEmailResult(data) {
+    const container = document.getElementById('emailResult');
+    const inputEl    = document.getElementById('emailInput');
+    const labelEl    = document.getElementById('emailLabel');
+    const phishingEl = document.getElementById('emailPhishing');
+    const confEl     = document.getElementById('emailConfidence');
+
+    // Populate fields
+    inputEl.textContent    = data.input      || '—';
+    labelEl.textContent    = data.label      || '—';
+    phishingEl.textContent = data.is_phishing || '—';
+    confEl.textContent     = data.confidence  || '—';
+
+    // Apply safe/danger class to verdict badge
+    phishingEl.className = 'field-value verdict-badge';
+    if (data.is_phishing === 'Safe') {
+        phishingEl.classList.add('verdict-safe');
+    } else {
+        phishingEl.classList.add('verdict-danger');
+    }
+
+    container.style.display = 'block';
+}
 
 async function getCurrentUrl() {
     try {
@@ -110,7 +185,7 @@ async function scanUrl(useCache = true) {
         const res = await fetch("http://127.0.0.1:8000/check/url", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ url: currentUrl, model: "threat-detection" })
+            body: JSON.stringify({ url: currentUrl, model: "2" })
         });
 
         if (!res.ok) throw new Error(`Server error: ${res.status}`);

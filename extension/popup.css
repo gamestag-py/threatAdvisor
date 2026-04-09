@@ -352,3 +352,93 @@ body {
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 2px; }
+
+
+/* ── Email Result Card ───────────────────────────── */
+.email-result-container {
+    margin-top: 12px;
+    border-radius: 10px;
+    border: 1px solid #2a2a3d;
+    background: #13131f;
+    overflow: hidden;
+    display: none;
+}
+
+.email-result-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    background: #1a1a2e;
+    border-bottom: 1px solid #2a2a3d;
+    font-size: 13px;
+    font-weight: 600;
+    color: #c8c8e0;
+}
+
+.email-result-body {
+    padding: 10px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.email-field {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+}
+
+.field-label {
+    color: #7070a0;
+    font-weight: 500;
+    flex-shrink: 0;
+    margin-right: 8px;
+}
+
+.field-value {
+    color: #d0d0f0;
+    text-align: right;
+    word-break: break-word;
+    max-width: 200px;
+}
+
+.label-badge {
+    background: #1e2a1e;
+    color: #6fcf6f;
+    padding: 2px 8px;
+    border-radius: 99px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.verdict-badge {
+    padding: 2px 8px;
+    border-radius: 99px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.verdict-safe {
+    background: #1e2a1e;
+    color: #6fcf6f;
+}
+
+.verdict-danger {
+    background: #2a1e1e;
+    color: #cf6f6f;
+}
+
+.confidence-value {
+    color: #a0a0d0;
+    font-weight: 600;
+}
+
+#emailInput {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 160px;
+    display: block;
+}
