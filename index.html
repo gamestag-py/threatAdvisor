@@ -1,158 +1,488 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
+
 <head>
-<meta charset="UTF-8">
-<title>Phishing Checker</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ThreatAdvisor | AI-Powered Phishing Detection</title>
 
-<style>
-body {
-    font-family: Arial, sans-serif;
-    background: #0f172a;
-    color: #fff;
-    display: flex;
-    justify-content: center;
-    padding: 40px;
-}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Space+Grotesk:wght@400;600;700&display=swap"
+        rel="stylesheet">
 
-.container {
-    width: 500px;
-    background: #1e293b;
-    padding: 20px;
-    border-radius: 12px;
-    box-shadow: 0 0 20px rgba(0,0,0,0.5);
-}
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        display: ['Space Grotesk', 'sans-serif'],
+                    },
+                    colors: {
+                        cyber: {
+                            blue: '#00f0ff',
+                            purple: '#8a2be2',
+                            dark: '#05050a',
+                            panel: 'rgba(15, 15, 25, 0.6)'
+                        }
+                    },
+                    animation: {
+                        'blob': 'blob 10s infinite',
+                        'pulse-glow': 'pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    },
+                    keyframes: {
+                        blob: {
+                            '0%': { transform: 'translate(0px, 0px) scale(1)' },
+                            '33%': { transform: 'translate(30px, -50px) scale(1.1)' },
+                            '66%': { transform: 'translate(-20px, 20px) scale(0.9)' },
+                            '100%': { transform: 'translate(0px, 0px) scale(1)' },
+                        },
+                        'pulse-glow': {
+                            '0%, 100%': { opacity: '1' },
+                            '50%': { opacity: '.5' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
 
-h2 {
-    text-align: center;
-}
+    <style>
+        body {
+            background-color: #05050a;
+            color: #ffffff;
+            overflow-x: hidden;
+        }
 
-input, select, button {
-    width: 100%;
-    padding: 10px;
-    margin-top: 10px;
-    border-radius: 8px;
-    border: none;
-}
+        .bg-grid {
+            background-size: 40px 40px;
+            background-image: linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+            mask-image: linear-gradient(to bottom, transparent, black, transparent);
+            -webkit-mask-image: radial-gradient(circle at center, black 40%, transparent 80%);
+        }
 
-button {
-    background: #3b82f6;
-    color: white;
-    cursor: pointer;
-}
+        .glass-panel {
+            background: linear-gradient(145deg, rgba(30, 30, 40, 0.7) 0%, rgba(15, 15, 20, 0.5) 100%);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
 
-button:hover {
-    background: #2563eb;
-}
+        .glass-input {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
 
-.result {
-    margin-top: 20px;
-    padding: 15px;
-    background: #020617;
-    border-radius: 10px;
-}
+        .glass-input:focus {
+            border-color: #00f0ff;
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.2);
+            outline: none;
+        }
 
-.safe { color: #22c55e; }
-.danger { color: #ef4444; }
-</style>
+        .btn-neon {
+            background: linear-gradient(90deg, #8a2be2, #00f0ff);
+            background-size: 200% auto;
+            transition: 0.5s;
+            position: relative;
+            z-index: 1;
+        }
+
+        .btn-neon:hover {
+            background-position: right center;
+            box-shadow: 0 0 20px rgba(0, 240, 255, 0.5);
+        }
+
+        .btn-neon::before {
+            content: '';
+            position: absolute;
+            top: 1px;
+            right: 1px;
+            bottom: 1px;
+            left: 1px;
+            background: #05050a;
+            border-radius: inherit;
+            z-index: -1;
+            transition: opacity 0.3s ease;
+            opacity: 0;
+        }
+
+        .btn-neon:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            filter: grayscale(100%);
+        }
+
+        .loader {
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top: 3px solid #00f0ff;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .status-safe {
+            color: #10b981;
+            border-color: rgba(16, 185, 129, 0.3);
+            background: rgba(16, 185, 129, 0.05);
+        }
+
+        .status-suspicious {
+            color: #f59e0b;
+            border-color: rgba(245, 158, 11, 0.3);
+            background: rgba(245, 158, 11, 0.05);
+        }
+
+        .status-phishing {
+            color: #ef4444;
+            border-color: rgba(239, 68, 68, 0.3);
+            background: rgba(239, 68, 68, 0.05);
+        }
+    </style>
 </head>
 
-<body>
+<body
+    class="antialiased min-h-screen flex flex-col items-center justify-center relative selection:bg-cyber-blue selection:text-black">
 
-<div class="container">
-    <h2>🔍 Phishing Checker</h2>
-
-    <!-- EMAIL CHECK -->
-    <h3>Email Check</h3>
-    <textarea type="text" id="emailInput" placeholder="Enter email text">
-
-    </textarea>
-    <button onclick="checkEmail()">Check Email</button>
-
-    <!-- URL CHECK -->
-    <h3 style="margin-top:20px;">URL Check</h3>
-    <input type="text" id="urlInput" placeholder="Enter URL">
-    
-    <select id="modelSelect">
-        <option value="1">Model 1</option>
-        <option value="2">Model 2</option>
-        <option value="3">Model 3</option>
-    </select>
-
-    <button onclick="checkURL()">Check URL</button>
-
-    <!-- RESULT -->
-    <div class="result" id="resultBox">
-        Result will appear here...
+    <div class="fixed inset-0 z-0 pointer-events-none">
+        <div class="absolute inset-0 bg-grid"></div>
+        <div
+            class="absolute top-1/4 left-1/4 w-96 h-96 bg-cyber-purple/20 rounded-full mix-blend-screen filter blur-[100px] animate-blob">
+        </div>
+        <div class="absolute top-1/3 right-1/4 w-96 h-96 bg-cyber-blue/20 rounded-full mix-blend-screen filter blur-[100px] animate-blob"
+            style="animation-delay: 2s;"></div>
+        <div class="absolute bottom-1/4 left-1/2 w-96 h-96 bg-indigo-500/20 rounded-full mix-blend-screen filter blur-[100px] animate-blob"
+            style="animation-delay: 4s;"></div>
     </div>
-</div>
 
-<script>
+    <main class="relative z-10 w-full max-w-4xl px-4 py-12 flex flex-col items-center">
+        <div class="text-center mb-12">
+            <div
+                class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-white/10 bg-white/5 backdrop-blur-sm mb-6 text-sm font-medium text-gray-300">
+                <span class="w-2 h-2 rounded-full bg-cyber-blue animate-pulse-glow"></span>
+                ThreatAdvisor v2.0 Live
+            </div>
+            <h1
+                class="text-5xl md:text-7xl font-display font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-white via-gray-200 to-gray-500">
+                AI-Powered <br /> <span
+                    class="bg-clip-text text-transparent bg-gradient-to-r from-cyber-purple to-cyber-blue">Phishing
+                    Detection</span>
+            </h1>
+            <p class="text-lg text-gray-400 max-w-2xl mx-auto font-light">
+                Scan URLs and Emails in real-time with advanced threat intelligence. Don't guess, know for sure.
+            </p>
+        </div>
 
-// EMAIL CHECK
-async function checkEmail() {
-    const email = document.getElementById("emailInput").value;
+        <div class="glass-panel w-full rounded-2xl p-6 md:p-8 shadow-2xl relative overflow-hidden">
+            <div
+                class="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-cyber-blue to-transparent opacity-50">
+            </div>
 
-    const res = await fetch("http://127.0.0.1:8000/check/email", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ email })
-    });
+            <div class="flex border-b border-white/10 mb-6">
+                <button id="tab-url"
+                    class="flex-1 py-3 text-center font-medium text-cyber-blue border-b-2 border-cyber-blue transition-colors">
+                    <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1">
+                        </path>
+                    </svg>
+                    URL Scan
+                </button>
+                <button id="tab-email"
+                    class="flex-1 py-3 text-center font-medium text-gray-400 border-b-2 border-transparent hover:text-gray-200 transition-colors">
+                    <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z">
+                        </path>
+                    </svg>
+                    Email Scan
+                </button>
+            </div>
 
-    const data = await res.json();
-    displayEmailResult(data);
-}
+            <form id="url-form" class="space-y-4 block">
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9">
+                            </path>
+                        </svg>
+                    </div>
+                    <input type="url" id="url-input" required placeholder="https://example.com"
+                        class="w-full pl-10 pr-4 py-3 rounded-xl glass-input text-white placeholder-gray-500">
+                </div>
+                <button type="submit" id="btn-scan-url"
+                    class="w-full btn-neon text-white font-semibold py-3 rounded-xl flex items-center justify-center gap-2">
+                    <span>Scan URL</span>
+                    <div class="loader hidden" id="loader-url"></div>
+                </button>
+            </form>
+
+            <form id="email-form" class="space-y-4 hidden">
+                <textarea id="email-input" required rows="5"
+                    placeholder="Paste suspicious email text or headers here..."
+                    class="w-full p-4 rounded-xl glass-input text-white placeholder-gray-500 resize-none"></textarea>
+                <button type="submit" id="btn-scan-email"
+                    class="w-full btn-neon text-white font-semibold py-3 rounded-xl flex items-center justify-center gap-2">
+                    <span>Analyze Email</span>
+                    <div class="loader hidden" id="loader-email"></div>
+                </button>
+            </form>
+        </div>
+
+        <div id="result-panel" class="w-full mt-6 hidden transition-all duration-500 transform translate-y-4 opacity-0">
+            <div id="result-card"
+                class="glass-panel rounded-2xl p-6 border-l-4 flex flex-col md:flex-row items-center justify-between gap-6">
+                <div class="flex items-center gap-4">
+                    <div id="result-icon" class="p-3 rounded-full bg-white/5">
+                    </div>
+                    <div>
+                        <h3 class="text-sm text-gray-400 font-medium uppercase tracking-wider mb-1">Analysis Result</h3>
+                        <div class="flex items-center gap-3">
+                            <span id="result-status" class="text-2xl font-display font-bold capitalize">Safe</span>
+                            <span id="result-badge" class="px-2 py-1 text-xs rounded-md border font-medium"></span>
+                        </div>
+                        <p id="result-reason" class="text-sm text-gray-300 mt-2 hidden italic"></p>
+                    </div>
+                </div>
+
+                <div class="flex flex-col items-end min-w-[150px]">
+                    <span class="text-sm text-gray-400 mb-1">Confidence</span>
+                    <div class="flex items-center gap-3 w-full">
+                        <div class="w-full bg-gray-700/50 rounded-full h-2">
+                            <div id="confidence-bar" class="h-2 rounded-full transition-all duration-1000 w-0"></div>
+                        </div>
+                        <span id="confidence-text" class="text-lg font-bold font-display uppercase">0%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="error-toast"
+            class="fixed bottom-4 right-4 bg-red-500/10 border border-red-500/50 text-red-400 px-4 py-3 rounded-xl backdrop-blur-md flex items-center gap-3 transition-all duration-300 transform translate-y-20 opacity-0 z-50">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <span id="error-message">Network error occurred.</span>
+        </div>
+    </main>
+
+    <script>
+        const tabUrl = document.getElementById('tab-url');
+        const tabEmail = document.getElementById('tab-email');
+        const formUrl = document.getElementById('url-form');
+        const formEmail = document.getElementById('email-form');
+        const inputUrl = document.getElementById('url-input');
+        const inputEmail = document.getElementById('email-input');
+
+        const btnScanUrl = document.getElementById('btn-scan-url');
+        const btnScanEmail = document.getElementById('btn-scan-email');
+        const loaderUrl = document.getElementById('loader-url');
+        const loaderEmail = document.getElementById('loader-email');
+
+        const resultPanel = document.getElementById('result-panel');
+        const resultCard = document.getElementById('result-card');
+        const resultIcon = document.getElementById('result-icon');
+        const resultStatus = document.getElementById('result-status');
+        const resultBadge = document.getElementById('result-badge');
+        const resultReason = document.getElementById('result-reason');
+        const confidenceBar = document.getElementById('confidence-bar');
+        const confidenceText = document.getElementById('confidence-text');
+
+        const errorToast = document.getElementById('error-toast');
+        const errorMessage = document.getElementById('error-message');
+
+        tabUrl.addEventListener('click', () => {
+            formUrl.classList.remove('hidden'); formEmail.classList.add('hidden');
+            tabUrl.classList.add('text-cyber-blue', 'border-cyber-blue'); tabUrl.classList.remove('text-gray-400', 'border-transparent');
+            tabEmail.classList.remove('text-cyber-blue', 'border-cyber-blue'); tabEmail.classList.add('text-gray-400', 'border-transparent');
+            hideResult();
+        });
+
+        tabEmail.addEventListener('click', () => {
+            formEmail.classList.remove('hidden'); formUrl.classList.add('hidden');
+            tabEmail.classList.add('text-cyber-blue', 'border-cyber-blue'); tabEmail.classList.remove('text-gray-400', 'border-transparent');
+            tabUrl.classList.remove('text-cyber-blue', 'border-cyber-blue'); tabUrl.classList.add('text-gray-400', 'border-transparent');
+            hideResult();
+        });
+
+        function setLoading(isLoading, type) {
+            const btn = type === 'url' ? btnScanUrl : btnScanEmail;
+            const loader = type === 'url' ? loaderUrl : loaderEmail;
+            const textSpan = btn.querySelector('span');
+            if (isLoading) {
+                btn.disabled = true; textSpan.innerText = 'Scanning...';
+                loader.classList.remove('hidden'); hideResult();
+            } else {
+                btn.disabled = false; textSpan.innerText = type === 'url' ? 'Scan URL' : 'Analyze Email';
+                loader.classList.add('hidden');
+            }
+        }
+
+        // Add a variable to track the timeout
+        let hideTimeout;
+
+        function hideResult() {
+            resultPanel.classList.add('translate-y-4', 'opacity-0');
+            // Save the timeout ID
+            hideTimeout = setTimeout(() => {
+                resultPanel.classList.add('hidden');
+            }, 500);
+        }
 
 
-// URL CHECK
-async function checkURL() {
-    const url = document.getElementById("urlInput").value;
-    const model = document.getElementById("modelSelect").value;
 
-    const res = await fetch("http://127.0.0.1:8000/check/url", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ url, model })
-    });
+        function showError(msg) {
+            errorMessage.innerText = msg;
+            errorToast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => { errorToast.classList.add('translate-y-20', 'opacity-0'); }, 4000);
+        }
 
-    const data = await res.json();
-    displayURLResult(data);
-}
+        function displayResult(data, type) {
+            // Clear the timeout so it doesn't accidentally hide the new result!
+            clearTimeout(hideTimeout);
 
+            resultPanel.classList.remove('hidden');
+            void resultPanel.offsetWidth; // trigger reflow
+            resultPanel.classList.remove('translate-y-4', 'opacity-0');
 
-// DISPLAY EMAIL RESULT
-function displayEmailResult(data) {
-    const box = document.getElementById("resultBox");
+            resultCard.className = 'glass-panel rounded-2xl p-6 border-l-4 flex flex-col md:flex-row items-center justify-between gap-6';
+            resultBadge.className = 'px-2 py-1 text-xs rounded-md border font-medium';
 
-    const colorClass = data.label.includes("Legitimate") ? "safe" : "danger";
+            let statusText = '';
+            let confidenceValText = '';
+            let barWidth = 0;
 
-    box.innerHTML = `
-        <h3 class="${colorClass}">${data.label}</h3>
-        <p><b>Input:</b> ${data.input}</p>
-        <p><b>Confidence:</b> ${data.confidence}</p>
-        <p><b>Type:</b> ${data.type}</p>
-    `;
-}
+            // Handle specific JSON structures
+            if (type === 'email') {
+                statusText = data.is_phishing || 'Unknown';
+                confidenceValText = data.confidence || '0%';
+                barWidth = parseFloat(confidenceValText) || 0;
+                resultReason.classList.add('hidden');
+            } else if (type === 'url') {
+                statusText = data.label || 'Unknown';
+                confidenceValText = data.confidence || 'Unknown';
 
+                // Map text to progress bar width
+                const confLower = confidenceValText.toLowerCase();
+                if (confLower === 'high') barWidth = 95;
+                else if (confLower === 'medium') barWidth = 60;
+                else if (confLower === 'low') barWidth = 20;
 
-// DISPLAY URL RESULT
-function displayURLResult(data) {
-    const box = document.getElementById("resultBox");
+                // Show reason if available
+                if (data.reason) {
+                    resultReason.innerText = `Reason: ${data.reason}`;
+                    resultReason.classList.remove('hidden');
+                } else {
+                    resultReason.classList.add('hidden');
+                }
+            }
 
-    const colorClass = data.label === "safe" ? "safe" : "danger";
+            resultStatus.innerText = statusText.replace('🚨', '').trim();
+            confidenceText.innerText = confidenceValText;
 
-    box.innerHTML = `
-        <h3 class="${colorClass}">${data.emoji} ${data.label.toUpperCase()}</h3>
-        <p><b>URL:</b> ${data.url}</p>
-        <p><b>Confidence:</b> ${data.confidence}</p>
-        <p><b>Reason:</b> ${data.reason}</p>
-    `;
-}
+            setTimeout(() => { confidenceBar.style.width = `${barWidth}%`; }, 100);
 
-</script>
+            const statusLower = statusText.toLowerCase();
 
+            // Theming based on risk level
+            if (statusLower.includes('safe')) {
+                resultCard.classList.add('border-[#10b981]');
+                resultStatus.classList.add('text-[#10b981]');
+                resultBadge.classList.add('status-safe');
+                resultBadge.innerText = 'LOW RISK';
+                confidenceBar.className = 'h-2 rounded-full transition-all duration-1000 bg-[#10b981]';
+                resultIcon.innerHTML = `<svg class="w-8 h-8 text-[#10b981]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+            }
+            else if (statusLower.includes('phishing') || statusLower.includes('malicious')) {
+                resultCard.classList.add('border-[#ef4444]');
+                resultStatus.classList.add('text-[#ef4444]');
+                resultBadge.classList.add('status-phishing');
+                resultBadge.innerText = 'CRITICAL RISK';
+                confidenceBar.className = 'h-2 rounded-full transition-all duration-1000 bg-[#ef4444]';
+                resultIcon.innerHTML = `<svg class="w-8 h-8 text-[#ef4444]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>`;
+            }
+            else {
+                resultCard.classList.add('border-[#f59e0b]');
+                resultStatus.classList.add('text-[#f59e0b]');
+                resultBadge.classList.add('status-suspicious');
+                resultBadge.innerText = 'MODERATE RISK';
+                confidenceBar.className = 'h-2 rounded-full transition-all duration-1000 bg-[#f59e0b]';
+                resultIcon.innerHTML = `<svg class="w-8 h-8 text-[#f59e0b]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+            }
+        }
+        formUrl.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const value = inputUrl.value.trim();
+            if (!value) return;
+
+            setLoading(true, 'url');
+            confidenceBar.style.width = '0%';
+
+            try {
+                const response = await fetch("http://127.0.0.1:8000/check/url", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ url: value, model: "2" })
+                });
+
+                if (!response.ok) throw new Error(`Server returned ${response.status}`);
+                const data = await response.json();
+                displayResult(data, 'url'); // Pass type
+
+            } catch (error) {
+                console.error("URL Scan Error:", error);
+                showError(error.message === 'Failed to fetch' ? 'Cannot connect to local server (127.0.0.1:8000)' : 'Error scanning URL.');
+            } finally {
+                setLoading(false, 'url');
+            }
+        });
+
+        formEmail.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const value = inputEmail.value.trim();
+            if (!value) return;
+
+            setLoading(true, 'email');
+            confidenceBar.style.width = '0%';
+
+            try {
+                const response = await fetch("http://127.0.0.1:8000/check/email", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email: value })
+                });
+
+                if (!response.ok) throw new Error(`Server returned ${response.status}`);
+                const data = await response.json();
+                displayResult(data, 'email'); // Pass type
+
+            } catch (error) {
+                console.error("Email Scan Error:", error);
+                showError(error.message === 'Failed to fetch' ? 'Cannot connect to local server (127.0.0.1:8000)' : 'Error scanning Email.');
+            } finally {
+                setLoading(false, 'email');
+            }
+        });
+    </script>
 </body>
+
 </html>

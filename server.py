@@ -34,8 +34,6 @@ print("="*60 + "\n")
 
 
 all_models = load_all_models()
-print(all_models)
-print(predict_url("https://amazon.com" , all_models["1"]))
 # ─── Request Models ───────────────────────────────────────────────────────
 class URLRequest(BaseModel):
     url: str
