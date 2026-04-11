@@ -61,10 +61,8 @@ def get_base_url(url: str) -> str:
     
     Example: https://abc.domain.com/abubais?asasvquw → https://abc.domain.com
     """
-    # parsed = urlparse(url)
-    # return f"{parsed.scheme}://{parsed.netloc}"
     parsed = urlparse(url)
-    return f"{parsed.scheme}://{parsed.netloc}{parsed.path}"
+    return f"{parsed.scheme}://{parsed.netloc}"
 
 
 def get_root_domain(domain: str) -> str:
@@ -291,17 +289,20 @@ def predict_url(url: str, model) -> dict:
         }
 
     # 7. ML model fallback
-    features   = extract_features(base_url)
-    print(features)
+    features   = extract_features(url)
     prediction = model.predict([features])[0]
-    print(model.predict([features]))
     if prediction == 1:
-        return {
-            "url": base_url, "label": "phishing",
-            "confidence": "low",
-            "reason": "ML model flagged as phishing",
-            "emoji": "⚠️",
-        }
+        root_url = get_base_url(url)
+        root_features = extract_features(root_url)
+        root_prediction = model.predict([root_features])[0]
+        if root_prediction == 1:
+            return {
+                "url": root_url, "label": "phishing",
+                "confidence": "low",
+                "reason": "ML model flagged as phishing after root-domain recheck",
+                "emoji": "⚠️",
+            }
+        url = root_url
 
     return {
         "url": base_url, "label": "safe",

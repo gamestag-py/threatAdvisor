@@ -26,6 +26,7 @@ BRAND_DOMAINS = {
     # Travel
     "booking.com", "expedia.com", "airbnb.com", "tripadvisor.com",
     "makemytrip.com", "goibibo.com", "uber.com", "ola.com",
+    "powerpoint.cloud.microsoft"
     # Tech
     "microsoft.com", "apple.com", "openai.com", "adobe.com", "oracle.com",
     "ibm.com", "intel.com", "hp.com", "dell.com", "lenovo.com", "asus.com",

@@ -218,15 +218,14 @@ function displayResult(data, fromCache = false) {
     const label = (data.label || data.threat_level || 'unknown').toLowerCase();
     const emoji = data.emoji || getEmojiForLabel(label);
     const isSafe = label === 'safe';
-    const isDanger = label === 'danger' || label === 'malicious';
-    const isWarning = label === 'warning';
+    const isDanger = label === 'danger' || label === 'malicious' || label === 'phishing';
+    const isWarning = label === 'warning' || label === 'unverified';
 
     let statusClass = isSafe ? 'safe' : isDanger ? 'danger' : isWarning ? 'warning' : 'safe';
     let statusText = `${emoji} ${label.charAt(0).toUpperCase() + label.slice(1)}`;
 
     html += `<span class="result-status ${statusClass}">${statusText}</span>`;
 
-    // Cached badge + rescan button
     if (fromCache) {
         html += `<span class="cached-badge" title="Cached result">⚡ Cached</span>`;
         html += `<button class="rescan-btn" onclick="scanUrl(false)">Rescan</button>`;
@@ -235,21 +234,36 @@ function displayResult(data, fromCache = false) {
     html += '</div>';
     html += '<div class="result-details">';
 
-    if (data.reason) {
-        html += `<p><strong>Assessment:</strong> ${escapeHtml(data.reason)}</p>`;
-    } else if (data.message) {
-        html += `<p><strong>Assessment:</strong> ${escapeHtml(data.message)}</p>`;
-    }
-
     if (data.url) {
-        html += `<p><strong>URL Checked:</strong><br><code style="word-break:break-all;font-size:11px;color:#666">${escapeHtml(data.url)}</code></p>`;
+        html += `<p><strong>URL Checked:</strong><br>
+                 <code style="word-break:break-all;font-size:11px;color:#666">
+                   ${escapeHtml(data.url)}
+                 </code></p>`;
     }
 
     if (data.confidence) {
-        let confidenceText = typeof data.confidence === 'number'
+        const confidenceText = typeof data.confidence === 'number'
             ? Math.round(data.confidence * 100) + '%'
             : data.confidence;
         html += `<p><strong>Confidence:</strong> ${escapeHtml(String(confidenceText))}</p>`;
+    }
+
+    // ── Reasons (array from new API) ──────────────────────────────────────────
+    const reasons = Array.isArray(data.reasons) && data.reasons.length > 0
+        ? data.reasons
+        : data.reason                           // legacy single-string fallback
+            ? [data.reason]
+            : data.message
+                ? [data.message]
+                : [];
+
+    if (reasons.length > 0) {
+        html += `<div>
+                   <strong>Assessment:</strong>
+                   <ul class="threat-list" style="margin-top:6px">
+                     ${reasons.map(r => `<li>${escapeHtml(r)}</li>`).join('')}
+                   </ul>
+                 </div>`;
     }
 
     if (data.threats && Array.isArray(data.threats) && data.threats.length > 0) {
@@ -269,7 +283,6 @@ function displayResult(data, fromCache = false) {
     resultContent.innerHTML = html;
     showResult();
 }
-
 // ========== THREAT WARNING INJECTION ==========
 
 // Main function that injects threat warning into the active tab
@@ -305,18 +318,14 @@ async function injectWarningIntoActiveTab(data) {
 
 // This function runs INSIDE the webpage (injected via executeScript)
 function injectThreatWarning(threatData) {
-    const { isDanger, isWarning, url, reason, threats, label } = threatData;
+    const { isDanger, url } = threatData;
 
-    // Create warning modal wrapper
     const modal = document.createElement('div');
     modal.id = 'threat-warning-modal';
     modal.style.cssText = `
         position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.7);
+        inset: 0;
+        background: rgba(0,0,0,0.6);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -324,162 +333,120 @@ function injectThreatWarning(threatData) {
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     `;
 
-    // Create warning card
     const card = document.createElement('div');
     card.style.cssText = `
-        background: white;
-        border-radius: 12px;
-        padding: 32px;
-        max-width: 500px;
-        width: 90%;
-        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-        animation: slideIn 0.3s ease-out;
-    `;
-
-    // Add animation
-    const style = document.createElement('style');
-    style.textContent = `
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateY(-20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-    `;
-    document.head.appendChild(style);
-
-    // Warning header
-    const header = document.createElement('div');
-    header.style.cssText = `
+        background: #fff;
+        border-radius: 16px;
+        width: 360px;
+        padding: 24px;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.3);
         text-align: center;
-        margin-bottom: 20px;
     `;
 
-    const emoji = isDanger ? '🚨' : '⚠️';
-    const statusColor = isDanger ? '#d32f2f' : '#f57c00';
-    const statusText = isDanger ? 'MALICIOUS SITE DETECTED' : 'WARNING: SUSPICIOUS SITE';
-
+    // HEADER
+    const header = document.createElement('div');
     header.innerHTML = `
-        <div style="font-size: 48px; margin-bottom: 12px;">${emoji}</div>
-        <h1 style="margin: 0; color: ${statusColor}; font-size: 20px; font-weight: 600;">
-            ${statusText}
-        </h1>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+            <div style="display:flex;align-items:center;gap:8px;">
+                <div style="width:28px;height:28px;background:#ff7a00;border-radius:6px; background:url(https://cdn-icons-png.flaticon.com/512/9645/9645004.png)no-repeat center center;background-size:cover"></div>
+                <span style="font-weight:600;font-size:16px;color:black">ThreatAdvisor</span>
+            </div>
+            <span style="background:#2ecc71;color:#fff;padding:4px 10px;border-radius:20px;font-size:12px;">
+                Active
+            </span>
+        </div>
+        <hr style="border:none;border-top:1px solid #eee;margin-bottom:20px;">
     `;
     card.appendChild(header);
 
-    // Risk description
-    const description = document.createElement('p');
-    description.style.cssText = `
-        color: #333;
-        font-size: 14px;
-        line-height: 1.6;
-        margin: 16px 0;
-        text-align: center;
+    // ICON
+    const icon = document.createElement('div');
+    icon.innerHTML = `
+        <div style="
+            width:80px;
+            height:80px;
+            background:#ff6a00;
+            border-radius:50%;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            margin:0 auto 16px;
+            color:white;
+            font-size:40px;
+            font-weight:bold;
+        ">!</div>
     `;
-    description.textContent = reason || 'This website has been flagged as potentially harmful.';
-    card.appendChild(description);
+    card.appendChild(icon);
 
-    // Threats list (if available)
-    if (threats && threats.length > 0) {
-        const threatsList = document.createElement('div');
-        threatsList.style.cssText = `
-            background: #f5f5f5;
-            border-left: 4px solid ${statusColor};
-            padding: 12px;
-            border-radius: 4px;
-            margin: 16px 0;
-            font-size: 13px;
-            color: #555;
-        `;
-        threatsList.innerHTML = `<strong>Detected Threats:</strong><ul style="margin: 8px 0 0 20px; padding: 0;">
-            ${threats.map(t => {
-                const threatName = typeof t === 'string' ? t : t.name || 'Unknown threat';
-                return `<li>${threatName}</li>`;
-            }).join('')}
-        </ul>`;
-        card.appendChild(threatsList);
-    }
-
-    // URL display
-    const urlDisplay = document.createElement('div');
-    urlDisplay.style.cssText = `
-        background: #f9f9f9;
-        padding: 10px;
-        border-radius: 4px;
-        margin: 16px 0;
-        font-size: 12px;
-        color: #666;
-        word-break: break-all;
-        border: 1px solid #ddd;
+    // TITLE
+    const title = document.createElement('h2');
+    title.textContent = 'Phishing Threat Detected';
+    title.style.cssText = `
+        color:#e53935;
+        font-size:20px;
+        margin-bottom:8px;
     `;
-    urlDisplay.innerHTML = `<strong>URL:</strong> ${url}`;
-    card.appendChild(urlDisplay);
+    card.appendChild(title);
 
-    // Button container
-    const buttonContainer = document.createElement('div');
-    buttonContainer.style.cssText = `
-        display: flex;
-        gap: 12px;
-        margin-top: 24px;
+    // URL
+    const urlText = document.createElement('p');
+    urlText.textContent = url;
+    urlText.style.cssText = `
+        font-size:13px;
+        color:#555;
+        margin-bottom:20px;
+        word-break:break-all;
     `;
+    card.appendChild(urlText);
 
-    // Go back button
-    const goBackBtn = document.createElement('button');
-    goBackBtn.textContent = '← Go Back';
-    goBackBtn.style.cssText = `
-        flex: 1;
-        padding: 12px 16px;
-        border: 2px solid #ddd;
-        background: white;
-        color: #333;
-        border-radius: 6px;
-        font-size: 14px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.2s;
+    // BLOCK BUTTON
+    const blockBtn = document.createElement('button');
+    blockBtn.textContent = 'Block this site';
+    blockBtn.style.cssText = `
+        width:100%;
+        padding:12px;
+        background:linear-gradient(135deg,#ff6a00,#ff3d00);
+        color:white;
+        border:none;
+        border-radius:8px;
+        font-weight:600;
+        cursor:pointer;
+        margin-bottom:10px;
     `;
-    goBackBtn.onmouseover = () => {
-        goBackBtn.style.background = '#f5f5f5';
-        goBackBtn.style.borderColor = '#999';
+    blockBtn.onclick = () => {
+        window.location.href = "about:blank";
     };
-    goBackBtn.onmouseout = () => {
-        goBackBtn.style.background = 'white';
-        goBackBtn.style.borderColor = '#ddd';
-    };
-    goBackBtn.onclick = () => {
-        window.history.back();
-    };
-    buttonContainer.appendChild(goBackBtn);
 
-    // Continue button (with warning for malicious sites)
-    const continueBtn = document.createElement('button');
-    continueBtn.textContent = isDanger ? 'Continue Anyway' : 'Continue';
-    continueBtn.style.cssText = `
-        flex: 1;
-        padding: 12px 16px;
-        border: none;
-        background: ${statusColor};
-        color: white;
-        border-radius: 6px;
-        font-size: 14px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.2s;
+    // IGNORE BUTTON
+    const ignoreBtn = document.createElement('button');
+    ignoreBtn.textContent = 'Ignore';
+    ignoreBtn.style.cssText = `
+        width:100%;
+        padding:12px;
+        background:white;
+        border:2px solid #ff6a00;
+        color:#ff6a00;
+        border-radius:8px;
+        font-weight:600;
+        cursor:pointer;
     `;
-    continueBtn.onmouseover = () => {
-        continueBtn.style.opacity = '0.9';
-        continueBtn.style.transform = 'translateY(-1px)';
-    };
-    continueBtn.onmouseout = () => {
-        continueBtn.style.opacity = '1';
-        continueBtn.style.transform = 'translateY(0)';
-    };
-    continueBtn.onclick = () => {
-        modal.remove();
-    };
-    buttonContainer.appendChild(continueBtn);
+    ignoreBtn.onclick = () => modal.remove();
 
-    card.appendChild(buttonContainer);
+    card.appendChild(blockBtn);
+    card.appendChild(ignoreBtn);
+
+    // FOOTER
+    const footer = document.createElement('p');
+    footer.textContent = 'Scanned in 0.3s';
+    footer.style.cssText = `
+        margin-top:12px;
+        font-size:12px;
+        color:#888;
+    `;
+    card.appendChild(footer);
+
     modal.appendChild(card);
-    document.body.insertBefore(modal, document.body.firstChild);
+    document.body.appendChild(modal);
 }
 
 // ========== UTILITY FUNCTIONS ==========
