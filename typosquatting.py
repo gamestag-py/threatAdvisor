@@ -78,7 +78,6 @@ def levenshtein(a: str, b: str) -> int:
 from urllib.parse import urlparse
 
 def extract_domain(url: str) -> str:
-    # remove scheme
     if "://" not in url:
         url = "http://" + url
     
@@ -89,7 +88,6 @@ def extract_domain(url: str) -> str:
 def get_root_domain(domain: str) -> str:
     parts = domain.split(".")
     
-    # handle domains like ac.in, co.in
     if len(parts) >= 3 and parts[-2] in ["ac", "co", "gov", "org"]:
         return ".".join(parts[-3:])
     
@@ -99,13 +97,11 @@ def is_typosquat(url: str) -> int:
     domain = extract_domain(url)
     root_domain = get_root_domain(domain)
 
-    # ✅ Allow known legit domains + subdomains
     if root_domain in BRAND_DOMAINS:
         return 0
 
     name = root_domain.split(".")[0].lower()
 
-    # 🚫 Skip short domains (MAIN FIX)
     if len(name) <= 4:
         return 0
 
