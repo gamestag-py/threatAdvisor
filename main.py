@@ -49,7 +49,7 @@ def select_model():
     print("="*60)
     
     while True:
-        choice = input("\n📌 Select a model (1 or 2): ").strip()
+        choice = input("\n📌 Select a model (1 or 2 or 3): ").strip()
         if choice in AVAILABLE_MODELS:
             selected = AVAILABLE_MODELS[choice]
             print(f"\n✅ Selected: {selected['name']}")
