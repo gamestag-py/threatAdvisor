@@ -69,7 +69,14 @@ pip install pandas numpy scikit-learn joblib requests fastapi uvicorn torch tran
 python -c "import pandas, numpy, sklearn, fastapi, torch, transformers; print('✅ All dependencies installed')"
 ```
 
-#### 3. Start the Backend Server
+#### 3. Train and Save Models
+```bash
+python main.py
+```
+- Run this first time to train the URL detection models and save them under `modal/`.
+- If the model files already exist, this step can be skipped.
+
+#### 4. Start the Backend Server
 ```bash
 uvicorn server:app --reload --port 8000
 ```
@@ -79,6 +86,12 @@ You should see:
 ✅ SERVER INITIALIZED - ALL MODELS LOADED AND READY!
 📊 All 3 models loaded successfully
 ```
+
+#### Optional: Enable Google Safe Browsing
+- If you want Google Safe Browsing support, open `safe_browsing.py`.
+- Update the `GOOGLE_SAFE_BROWSING_API_KEY` value with your API key.
+- Restart the backend server after saving changes.
+
 
 ### Browser Extension Setup
 
