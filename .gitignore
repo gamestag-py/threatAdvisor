@@ -1,7 +1,6 @@
 OLD
 __pycache__/
 *.pyc
-*.csv
 bert_model/
 modal/
 OLDmodal/
