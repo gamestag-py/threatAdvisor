@@ -34,6 +34,7 @@ print("="*60 + "\n")
 
 
 all_models = load_all_models()
+
 # ─── Request Models ───────────────────────────────────────────────────────
 class URLRequest(BaseModel):
     url: str

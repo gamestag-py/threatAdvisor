@@ -126,7 +126,7 @@ if os.path.exists(ACTIVE_FEATURES_PATH) and os.path.exists(ACTIVE_LABELS_PATH):
     y = np.load(ACTIVE_LABELS_PATH)
 else:
     print("⏳ Building features (first run only)...")
-    df = pd.read_csv(ACTIVE_DATASET_PATH)
+    df = pd.read_csv(f"datasets/{ACTIVE_DATASET_PATH}")
     
     # Handle different dataset formats based on selected dataset
     if "PhiUSIIL" in ACTIVE_DATASET_PATH:

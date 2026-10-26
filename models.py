@@ -143,7 +143,7 @@ def _build_features(info: dict) -> tuple:
         return np.load(feat_path).tolist(), np.load(label_path)
 
     print(f"  ⏳ Building features for {info['name']} (first run)...")
-    df = pd.read_csv(info["dataset"])
+    df = pd.read_csv(f"datasets/{info['dataset']}")
     url_col, label_col = info["url_col"], info["label_col"]
 
     if "PhiUSIIL" in info["dataset"]:
